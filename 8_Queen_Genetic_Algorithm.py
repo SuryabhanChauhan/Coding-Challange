@@ -84,4 +84,4 @@ if __name__ == "__main__":
     temp = []
     for i in chrom_out:
         temp.append(i-1)
-    print(temp)
+    print(int(''.join(map(str,temp))))
