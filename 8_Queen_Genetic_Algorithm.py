@@ -81,4 +81,7 @@ if __name__ == "__main__":
     for chrom in population:
         if fitness(chrom) == maxFitness:
             chrom_out = chrom
-    print(chrom_out)
+    temp = []
+    for i in chrom_out:
+        temp.append(i-1)
+    print(temp)
