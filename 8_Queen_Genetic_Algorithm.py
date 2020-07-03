@@ -1,8 +1,6 @@
 import numpy as np
 import sys
 
-
-
 nQueens = 8
 STOP_CTR = 28
 MUTATE = 0.000001
@@ -10,22 +8,27 @@ MUTATE_FLAG = True
 MAX_ITER = 100000
 POPULATION = None
 
+
 class BoardPosition:
     def __init__(self):
         self.sequence = None
         self.fitness = None
         self.survival = None
+
     def setSequence(self, val):
         self.sequence = val
+
     def setFitness(self, fitness):
         self.fitness = fitness
+
     def setSurvival(self, val):
         self.survival = val
+
     def getAttr(self):
-        return {'sequence':sequence, 'fitness':fitness, 'survival':survival}
+        return {'sequence': sequence, 'fitness': fitness, 'survival': survival}
 
-def fitness(chromosome = None):
 
+def fitness(chromosome=None):
     clashes = 0;
     row_col_clashes = abs(len(chromosome) - len(np.unique(chromosome)))
     clashes += row_col_clashes
@@ -33,24 +36,23 @@ def fitness(chromosome = None):
     # diagonal clashes
     for i in range(len(chromosome)):
         for j in range(len(chromosome)):
-            if ( i != j):
-                dx = abs(i-j)
+            if (i != j):
+                dx = abs(i - j)
                 dy = abs(chromosome[i] - chromosome[j])
-                if(dx == dy):
+                if (dx == dy):
                     clashes += 1
-
 
     return 28 - clashes
 
 
 def generateChromosome():
-    
     global nQueens
     init_distribution = np.arange(nQueens)
     np.random.shuffle(init_distribution)
     return init_distribution
 
-def generatePopulation(population_size = 100):
+
+def generatePopulation(population_size=100):
     global POPULATION
 
     POPULATION = population_size
@@ -67,10 +69,9 @@ def getParent():
     globals()
     parent1, parent2 = None, None
 
-    
     summation_fitness = np.sum([x.fitness for x in population])
     for each in population:
-        each.survival = each.fitness/(summation_fitness*1.0)
+        each.survival = each.fitness / (summation_fitness * 1.0)
 
     while True:
         parent1_random = np.random.rand()
@@ -90,10 +91,10 @@ def getParent():
             if parent2 != parent1:
                 break
             else:
-                print("equal parents")
+                #print("equal parents")
                 continue
         except:
-            print("exception")
+            #print("exception")
             continue
 
     if parent1 is not None and parent2 is not None:
@@ -101,12 +102,14 @@ def getParent():
     else:
         sys.exit(-1)
 
+
 def reproduce_crossover(parent1, parent2):
     globals()
     n = len(parent1.sequence)
-    c = np.random.randint(n, size=1)
+    c = int(np.random.randint(n, size=1))
     child = BoardPosition()
     child.sequence = []
+
     child.sequence.extend(parent1.sequence[0:c])
     child.sequence.extend(parent2.sequence[c:])
     child.setFitness(fitness(child.sequence))
@@ -120,24 +123,32 @@ def mutate(child):
         child.sequence[c] = np.random.randint(8)
     return child
 
+
 def GA(iteration):
-    
     globals()
     newpopulation = []
     for i in range(len(population)):
         parent1, parent2 = getParent()
         child = reproduce_crossover(parent1, parent2)
 
-        if(MUTATE_FLAG):
-            child = mutate(child)
+        # if (MUTATE_FLAG):
+        #     child = mutate(child)
 
         newpopulation.append(child)
+
+    summation_fitness = np.sum([x.fitness for x in newpopulation])
+    for each in newpopulation:
+        each.survival = each.fitness / (summation_fitness * 1.0)
+
+        if (MUTATE_FLAG):
+            each = mutate(each)
+
     return newpopulation
 
 
 def stop():
     globals()
-    
+
     fitnessvals = [pos.fitness for pos in population]
     if STOP_CTR in fitnessvals:
         return True
@@ -146,21 +157,18 @@ def stop():
     return False
 
 
-
 population = generatePopulation(1000)
-
 
 iteration = 0;
 while not stop():
-    
+    print("Generation : ",iteration)
     population = GA(iteration)
-    iteration +=1 
+    iteration += 1
 
 
 for each in population:
     if each.fitness == 28:
         result = list(each.sequence)
         break
-result = ' '.join(map(str,result))
-
+result = ' '.join(map(str, result))
 print(result)
