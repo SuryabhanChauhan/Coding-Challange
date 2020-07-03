@@ -1,87 +1,166 @@
-import random
+import numpy as np
+import sys
 
-def random_chromosome(size): #making random chromosomes 
-    return [ random.randint(1, nq) for _ in range(nq) ]
 
-def fitness(chromosome):
-    horizontal_collisions = sum([chromosome.count(queen)-1 for queen in chromosome])/2
-    diagonal_collisions = 0
 
-    n = len(chromosome)
-    left_diagonal = [0] * 2*n
-    right_diagonal = [0] * 2*n
-    for i in range(n):
-        left_diagonal[i + chromosome[i] - 1] += 1
-        right_diagonal[len(chromosome) - i + chromosome[i] - 2] += 1
+nQueens = 8
+STOP_CTR = 28
+MUTATE = 0.000001
+MUTATE_FLAG = True
+MAX_ITER = 100000
+POPULATION = None
 
-    diagonal_collisions = 0
-    for i in range(2*n-1):
-        counter = 0
-        if left_diagonal[i] > 1:
-            counter += left_diagonal[i]-1
-        if right_diagonal[i] > 1:
-            counter += right_diagonal[i]-1
-        diagonal_collisions += counter / (n-abs(i-n+1))
+class BoardPosition:
+    def __init__(self):
+        self.sequence = None
+        self.fitness = None
+        self.survival = None
+    def setSequence(self, val):
+        self.sequence = val
+    def setFitness(self, fitness):
+        self.fitness = fitness
+    def setSurvival(self, val):
+        self.survival = val
+    def getAttr(self):
+        return {'sequence':sequence, 'fitness':fitness, 'survival':survival}
 
-    return int(maxFitness - (horizontal_collisions + diagonal_collisions)) #28-(2+3)=23
+def fitness(chromosome = None):
 
-def probability(chromosome, fitness):
-    return fitness(chromosome) / maxFitness
+    clashes = 0;
+    row_col_clashes = abs(len(chromosome) - len(np.unique(chromosome)))
+    clashes += row_col_clashes
 
-def random_pick(population, probabilities):
-    populationWithProbabilty = zip(population, probabilities)
-    total = sum(w for c, w in populationWithProbabilty)
-    r = random.uniform(0, total)
-    upto = 0
-    for c, w in zip(population, probabilities):
-        if upto + w >= r:
-            return c
-        upto += w
-    assert False, "Shouldn't get here"
+    # diagonal clashes
+    for i in range(len(chromosome)):
+        for j in range(len(chromosome)):
+            if ( i != j):
+                dx = abs(i-j)
+                dy = abs(chromosome[i] - chromosome[j])
+                if(dx == dy):
+                    clashes += 1
 
-def reproduce(x, y): #doing crossover between two chromosomes
-    n = len(x)
-    c = random.randint(0, n - 1)
-    return x[0:c] + y[c:n]
 
-def mutate(x):  #randomly changing the value of a random index of a chromosome
-    n = len(x)
-    c = random.randint(0, n - 1)
-    m = random.randint(1, n)
-    x[c] = m
-    return x
+    return 28 - clashes
 
-def genetic_queen(population, fitness):
-    mutation_probability = 0.03
-    new_population = []
-    probabilities = [probability(n, fitness) for n in population]
+
+def generateChromosome():
+    
+    global nQueens
+    init_distribution = np.arange(nQueens)
+    np.random.shuffle(init_distribution)
+    return init_distribution
+
+def generatePopulation(population_size = 100):
+    global POPULATION
+
+    POPULATION = population_size
+
+    population = [BoardPosition() for i in range(population_size)]
+    for i in range(population_size):
+        population[i].setSequence(generateChromosome())
+        population[i].setFitness(fitness(population[i].sequence))
+
+    return population
+
+
+def getParent():
+    globals()
+    parent1, parent2 = None, None
+
+    
+    summation_fitness = np.sum([x.fitness for x in population])
+    for each in population:
+        each.survival = each.fitness/(summation_fitness*1.0)
+
+    while True:
+        parent1_random = np.random.rand()
+        parent1_rn = [x for x in population if x.survival <= parent1_random]
+        try:
+            parent1 = parent1_rn[0]
+            break
+        except:
+            pass
+
+    while True:
+        parent2_random = np.random.rand()
+        parent2_rn = [x for x in population if x.survival <= parent2_random]
+        try:
+            t = np.random.randint(len(parent2_rn))
+            parent2 = parent2_rn[t]
+            if parent2 != parent1:
+                break
+            else:
+                print("equal parents")
+                continue
+        except:
+            print("exception")
+            continue
+
+    if parent1 is not None and parent2 is not None:
+        return parent1, parent2
+    else:
+        sys.exit(-1)
+
+def reproduce_crossover(parent1, parent2):
+    globals()
+    n = len(parent1.sequence)
+    c = np.random.randint(n, size=1)
+    child = BoardPosition()
+    child.sequence = []
+    child.sequence.extend(parent1.sequence[0:c])
+    child.sequence.extend(parent2.sequence[c:])
+    child.setFitness(fitness(child.sequence))
+    return child
+
+
+def mutate(child):
+    
+    if child.survival < MUTATE:
+        c = np.random.randint(8)
+        child.sequence[c] = np.random.randint(8)
+    return child
+
+def GA(iteration):
+    
+    globals()
+    newpopulation = []
     for i in range(len(population)):
-        x = random_pick(population, probabilities) #best chromosome 1
-        y = random_pick(population, probabilities) #best chromosome 2
-        child = reproduce(x, y) #creating two new chromosomes from the best 2 chromosomes
-        if random.random() < mutation_probability:
+        parent1, parent2 = getParent()
+        child = reproduce_crossover(parent1, parent2)
+
+        if(MUTATE_FLAG):
             child = mutate(child)
-        new_population.append(child)
-        if fitness(child) == maxFitness: break
-    return new_population
+
+        newpopulation.append(child)
+    return newpopulation
 
 
-if __name__ == "__main__":
-    nq = 8
-    maxFitness = (nq*(nq-1))/2
-    population = [random_chromosome(nq) for _ in range(100)]
+def stop():
+    globals()
+    
+    fitnessvals = [pos.fitness for pos in population]
+    if STOP_CTR in fitnessvals:
+        return True
+    if MAX_ITER == iteration:
+        return True
+    return False
 
-    generation = 1
 
-    while not maxFitness in [fitness(chrom) for chrom in population]:
-        
-        population = genetic_queen(population, fitness)
-        generation += 1
-    chrom_out = []
-    for chrom in population:
-        if fitness(chrom) == maxFitness:
-            chrom_out = chrom
-    temp = []
-    for i in chrom_out:
-        temp.append(i-1)
-    print(''.join(map(str,temp)))
+
+population = generatePopulation(1000)
+
+
+iteration = 0;
+while not stop():
+    
+    population = GA(iteration)
+    iteration +=1 
+
+
+for each in population:
+    if each.fitness == 28:
+        result = list(each.sequence)
+        break
+result = ' '.join(map(str,result))
+
+print(result)
