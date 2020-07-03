@@ -1,0 +1,20 @@
+import unittest
+from .Queen import fitness, generateChromosome, BoardPosition
+
+
+def test_fitness():
+    fit_obj = fitness(None)
+    assert fit_obj is None
+
+
+class TestBoardPosition(unittest.TestCase):
+
+    def test_setSequence(self):
+        board_pos = BoardPosition()
+        board_seq = board_pos.setSequence(None)
+        self.assertEqual(board_seq, None)
+
+
+if __name__ == '__main__':
+    test_fitness()
+    TestBoardPosition()
